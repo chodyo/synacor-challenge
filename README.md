@@ -1,2 +1,3 @@
 # synacor-challenge
-https://challenge.synacor.com/
+
+<https://challenge.synacor.com/>

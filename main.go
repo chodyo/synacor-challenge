@@ -134,6 +134,11 @@ func exec() int {
 			// halt: 0
 			//   stop execution and terminate the program
 			return 0
+		case jmp:
+			// jmp: 6 a
+			//   jump to <a>
+			jmpTo := read()
+			ptr = uint16(jmpTo)
 		case out:
 			// out: 19 a
 			//   write the character represented by ascii code <a> to the terminal
@@ -148,7 +153,6 @@ func exec() int {
 		case pop:
 		case eq:
 		case gt:
-		case jmp:
 		case jt:
 		case jf:
 		case add:
@@ -165,7 +169,9 @@ func exec() int {
 			fmt.Println("not implemented")
 			return -1
 		default:
-			fmt.Println("don't know what to do with this number", o)
+			fmt.Println("don't know what to do with this number:", o)
+			fmt.Println("previous op:", op(memory[ptr-2]), ptr-2)
+			fmt.Println("next op:", op(memory[ptr]), ptr)
 			return -2
 		}
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	osexec "os/exec"
 )
 
 type op int
@@ -56,9 +57,6 @@ var (
 	// memory is a 15 bit address space so ptr should never go above maxValue
 	ptr op
 
-	// print buffer
-	outbuf []byte
-
 	// for nice strings
 	ops = [...]string{
 		"halt",
@@ -94,8 +92,6 @@ func main() {
 
 	code := exec()
 	if code <= 0 {
-		fmt.Println("============== out ==============")
-		fmt.Printf("%s\n", outbuf) // could get fancy and put this in a defer, would need to watch out because os.Exit is going to skip defer
 		os.Exit(code)
 	}
 }
@@ -144,6 +140,9 @@ func readFileToMemory(filename string) {
 }
 
 func exec() int {
+	// disable input buffering
+	osexec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
+
 	for o := readAndIncrement(); ptr >= minValue && int(ptr) < len(memory); o = readAndIncrement() {
 		switch o {
 		case halt:
@@ -295,16 +294,22 @@ func exec() int {
 			// out: 19 a
 			//   write the character represented by ascii code <a> to the terminal
 			a := readAndIncrement()
-			outbuf = append(outbuf, byte(a))
+			fmt.Printf("%s", string(uint16(a)))
+		case in:
+			// in: 20 a
+			//   read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
+
+			a := readAddrAndIncrement()
+			b := make([]byte, 1)
+			if _, err := os.Stdin.Read(b); err != nil {
+				fmt.Println("failed to read input:", err)
+			}
+			val := op(b[0])
+			setAddr(a, val)
 		case noop:
 			// noop: 21
 			//   no operation
 			break
-		case in:
-			// in: 20 a
-			//   read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
-			fmt.Println("not implemented", o)
-			return -1
 		default:
 			fmt.Println("don't know what to do with this number:", o)
 			fmt.Println("previous op:", op(memory[ptr-2]), ptr-2)
@@ -318,7 +323,7 @@ func exec() int {
 
 func readAddr() op {
 	o := memory[ptr]
-	fmt.Printf("%d: %s\n", ptr, o)
+	// fmt.Printf("%d: %s\n", ptr, o)
 	return o
 }
 
